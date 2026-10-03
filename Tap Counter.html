@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>16:9 Tap Counter / Voting Web App</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Poppins -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #090d16;
+            color: #f8fafc;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        /* Fluid 16:9 Widescreen Box Container */
+        .widescreen-box {
+            width: 100%;
+            max-width: 100vw;
+            max-height: 85vh;
+            aspect-ratio: 16 / 9;
+        }
+
+        /* Fluid Responsive Typography with Clamp */
+        .fluid-candidate-name {
+            font-size: clamp(1.1rem, 3.2vw, 3.5rem);
+            line-height: 1.15;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            hyphens: auto;
+        }
+
+        .fluid-vote-count {
+            font-size: clamp(1.3rem, 4.2vw, 4.8rem);
+            line-height: 1;
+        }
+
+        /* Tap Ripple/Pulse Effect */
+        .tap-pulse {
+            animation: tapEffect 0.18s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes tapEffect {
+            0% { transform: scale(1); }
+            50% { transform: scale(0.978); }
+            100% { transform: scale(1); }
+        }
+
+        /* Custom Scrollbar for Settings Drawer */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+
+        .text-shadow-glow {
+            text-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+        }
+
+        .avatar-shadow {
+            box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.4), 0 0 0 6px rgba(255, 255, 255, 0.85);
+        }
+
+        /* 3D "VS" Badge Styling */
+        .vs-3d-badge {
+            background: radial-gradient(circle at 35% 35%, #ff416c, #ff4b2b 60%, #991b1b 100%);
+            box-shadow: 
+                0 10px 25px -3px rgba(0, 0, 0, 0.75),
+                0 0 20px rgba(255, 75, 43, 0.5),
+                inset 0 3px 6px rgba(255, 255, 255, 0.8),
+                inset 0 -4px 8px rgba(0, 0, 0, 0.6);
+            border: 3px solid rgba(255, 255, 255, 0.95);
+            transform: translate(-50%, -50%) rotate(-6deg);
+            filter: drop-shadow(0 8px 12px rgba(0,0,0,0.5));
+        }
+
+        .vs-3d-text {
+            font-style: italic;
+            font-weight: 900;
+            color: #ffffff;
+            text-shadow: 
+                1px 1px 0 #7f1d1d,
+                2px 2px 0 #7f1d1d,
+                3px 3px 0 #450a0a,
+                4px 4px 10px rgba(0, 0, 0, 0.8);
+        }
+    </style>
+</head>
+<body class="min-h-screen w-screen flex flex-col items-center justify-center overflow-hidden bg-slate-950 p-2 sm:p-4">
+
+    <header id="topHeader" class="fixed top-2 sm:top-4 z-30 flex items-center gap-1.5 sm:gap-3 bg-slate-900/90 backdrop-blur-md px-3 sm:px-5 py-1.5 sm:py-2 rounded-full border border-slate-700/70 shadow-2xl transition-all duration-300">
+        <h1 class="text-xs sm:text-sm font-bold text-slate-100 flex items-center gap-1.5">
+            <i class="fa-solid fa-check-to-slot text-amber-400"></i>
+            <span class="hidden xs:inline">Tap Counter</span>
+        </h1>
+        <div class="h-4 w-[1px] bg-slate-700"></div>
+        
+        <!-- Undo Button -->
+        <button id="undoBtn" title="Undo Last Tap (Hotkey: Z)" class="px-2.5 py-1 text-xs bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-slate-200 rounded-full transition flex items-center gap-1 border border-slate-700">
+            <i class="fa-solid fa-rotate-left text-amber-400"></i>
+            <span class="hidden sm:inline">Undo</span>
+        </button>
+
+        <!-- Sound Toggle -->
+        <button id="soundToggleBtn" title="Toggle Sound" class="px-2.5 py-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-full transition flex items-center gap-1.5 border border-slate-700">
+            <i id="soundIcon" class="fa-solid fa-volume-high text-emerald-400"></i>
+            <span id="soundStatusText" class="hidden sm:inline">Sound On</span>
+        </button>
+
+        <!-- Compact Icon Settings Button -->
+        <button id="openSettingsBtn" title="Settings & Customization" class="p-2 sm:px-3 sm:py-1 text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-full transition flex items-center gap-1.5 shadow-md shadow-indigo-600/40">
+            <i class="fa-solid fa-gear"></i>
+            <span class="hidden md:inline">Settings</span>
+        </button>
+
+        <!-- Fullscreen Toggle Button -->
+        <button id="fullscreenBtn" title="Toggle Fullscreen (Hotkey: F)" class="px-2.5 py-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-full transition flex items-center gap-1.5 border border-slate-700">
+            <i id="fullscreenIcon" class="fa-solid fa-expand"></i>
+            <span class="hidden sm:inline">Full Screen</span>
+        </button>
+    </header>
+
+    <main class="w-full max-w-[1280px] flex items-center justify-center my-auto">
+        <div id="widescreenFrame" class="widescreen-box relative w-full rounded-2xl overflow-hidden shadow-2xl border-2 border-slate-800 flex bg-slate-900">
+
+            <!-- LEFT CANDIDATE -->
+            <section id="leftSection" class="w-1/2 h-full relative cursor-pointer flex flex-col items-center justify-between p-3 sm:p-6 transition-colors duration-200 select-none border-r-2 border-black/20" style="background-color: #eab308;">
+                
+                <!-- Candidate 1 Name -->
+                <div class="w-full text-center px-1">
+                    <span id="leftNameDisplay" class="fluid-candidate-name font-black tracking-wide uppercase drop-shadow-md block w-full">
+                        Rahul
+                    </span>
+                </div>
+
+                <!-- Candidate 1 Profile Photo -->
+                <div class="relative my-auto flex items-center justify-center w-full max-h-[52%]">
+                    <div class="w-20 h-20 sm:w-32 sm:h-32 md:w-44 md:h-44 lg:w-52 lg:h-52 rounded-full overflow-hidden avatar-shadow bg-slate-800/30 flex items-center justify-center shrink-0">
+                        <img id="leftImgDisplay" src="https://placehold.co/300x300/f59e0b/ffffff?text=Rahul" alt="Rahul Profile" class="w-full h-full object-cover object-center pointer-events-none">
+                    </div>
+                </div>
+
+                <!-- Candidate 1 Vote Counter -->
+                <div class="w-full text-center px-1">
+                    <span id="leftVoteDisplay" class="fluid-vote-count font-black text-shadow-glow tracking-wide block w-full">
+                        Vote - 00
+                    </span>
+                </div>
+
+                <div class="absolute inset-0 bg-white/0 active:bg-white/10 transition-colors pointer-events-none"></div>
+            </section>
+
+            <!-- RIGHT CANDIDATE -->
+            <section id="rightSection" class="w-1/2 h-full relative cursor-pointer flex flex-col items-center justify-between p-3 sm:p-6 transition-colors duration-200 select-none" style="background-color: #06b6d4;">
+                
+                <!-- Candidate 2 Name -->
+                <div class="w-full text-center px-1">
+                    <span id="rightNameDisplay" class="fluid-candidate-name font-black tracking-wide uppercase drop-shadow-md block w-full">
+                        Amit
+                    </span>
+                </div>
+
+                <!-- Candidate 2 Profile Photo -->
+                <div class="relative my-auto flex items-center justify-center w-full max-h-[52%]">
+                    <div class="w-20 h-20 sm:w-32 sm:h-32 md:w-44 md:h-44 lg:w-52 lg:h-52 rounded-full overflow-hidden avatar-shadow bg-slate-800/30 flex items-center justify-center shrink-0">
+                        <img id="rightImgDisplay" src="https://placehold.co/300x300/06b6d4/ffffff?text=Amit" alt="Amit Profile" class="w-full h-full object-cover object-center pointer-events-none">
+                    </div>
+                </div>
+
+                <!-- Candidate 2 Vote Counter -->
+                <div class="w-full text-center px-1">
+                    <span id="rightVoteDisplay" class="fluid-vote-count font-black text-shadow-glow tracking-wide block w-full">
+                        Vote - 00
+                    </span>
+                </div>
+
+                <div class="absolute inset-0 bg-white/0 active:bg-white/10 transition-colors pointer-events-none"></div>
+            </section>
+
+            <!-- Center Divider Line -->
+            <div class="absolute top-0 bottom-0 left-1/2 transform -translate-x-1/2 w-1.5 bg-black/30 pointer-events-none"></div>
+
+            <!-- Center 3D "VS" Badge -->
+            <div class="absolute top-1/2 left-1/2 z-20 pointer-events-none">
+                <div class="vs-3d-badge w-11 h-11 sm:w-16 sm:h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 rounded-full flex items-center justify-center">
+                    <span class="vs-3d-text text-base sm:text-2xl md:text-3xl lg:text-4xl tracking-wider select-none">VS</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Settings Slide-Over Drawer -->
+    <div id="settingsDrawer" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300 flex justify-end">
+        <div id="drawerContent" class="w-full max-w-md bg-slate-900 h-full p-4 sm:p-6 overflow-y-auto transform translate-x-full transition-transform duration-300 border-l border-slate-800 flex flex-col justify-between">
+            <div>
+                <!-- Header -->
+                <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-800">
+                    <h2 class="text-base sm:text-lg font-bold text-slate-100 flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-indigo-400"></i> Settings & Customization
+                    </h2>
+                    <button id="closeSettingsBtn" class="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
+
+                <!-- Left Candidate Controls -->
+                <div class="space-y-3.5 mb-5 bg-slate-950/70 p-4 rounded-xl border border-slate-800/80">
+                    <h3 class="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2">
+                        <i class="fa-solid fa-user"></i> Left Side (Candidate 1)
+                    </h3>
+
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Candidate Name</label>
+                        <input type="text" id="leftNameInput" value="Rahul" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Background Color</label>
+                        <div class="flex items-center gap-3">
+                            <input type="color" id="leftColorInput" value="#eab308" class="h-8 w-14 bg-transparent rounded cursor-pointer border border-slate-700">
+                            <span id="leftColorHex" class="text-xs font-mono text-slate-400">#eab308</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Profile Photo (Auto-Crop)</label>
+                        <input type="file" id="leftImgInput" accept="image/*" class="w-full text-xs text-slate-400 file:mr-2 file:py-1 file:px-2.5 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-amber-500/20 file:text-amber-300 hover:file:bg-amber-500/30 cursor-pointer">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Celebration Audio (MP3/WAV/AAC)</label>
+                        <input type="file" id="leftAudioInput" accept="audio/*" class="w-full text-xs text-slate-400 file:mr-2 file:py-1 file:px-2.5 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-300 hover:file:bg-slate-700 cursor-pointer">
+                        <span id="leftAudioStatus" class="text-[10px] text-emerald-400 mt-1 block">✓ Built-in synth chime ready</span>
+                    </div>
+                </div>
+
+                <!-- Keyboard Shortcuts Help Card -->
+                <div class="mb-5 bg-slate-950/40 p-3 rounded-xl border border-slate-800 text-[11px] text-slate-400 space-y-1">
+                    <div class="font-bold text-slate-300 mb-1"><i class="fa-solid fa-keyboard text-indigo-400"></i> Keyboard Shortcuts</div>
+                    <div class="flex justify-between"><span>Left Vote:</span> <kbd class="px-1.5 py-0.5 bg-slate-800 rounded text-slate-200 font-mono">←</kbd> or <kbd class="px-1.5 py-0.5 bg-slate-800 rounded text-slate-200 font-mono">A</kbd></div>
+                    <div class="flex justify-between"><span>Right Vote:</span> <kbd class="px-1.5 py-0.5 bg-slate-800 rounded text-slate-200 font-mono">→</kbd> or <kbd class="px-1.5 py-0.5 bg-slate-800 rounded text-slate-200 font-mono">D</kbd></div>
+                    <div class="flex justify-between"><span>Undo Tap:</span> <kbd class="px-1.5 py-0.5 bg-slate-800 rounded text-slate-200 font-mono">Z</kbd> or <kbd class="px-1.5 py-0.5 bg-slate-800 rounded text-slate-200 font-mono">U</kbd></div>
+                    <div class="flex justify-between"><span>Toggle Full Screen:</span> <kbd class="px-1.5 py-0.5 bg-slate-800 rounded text-slate-200 font-mono">F</kbd></div>
+                </div>
+
+                <!-- Right Candidate Controls -->
+                <div class="space-y-3.5 mb-5 bg-slate-950/70 p-4 rounded-xl border border-slate-800/80">
+                    <h3 class="text-xs font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-2">
+                        <i class="fa-solid fa-user"></i> Right Side (Candidate 2)
+                    </h3>
+
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Candidate Name</label>
+                        <input type="text" id="rightNameInput" value="Amit" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Background Color</label>
+                        <div class="flex items-center gap-3">
+                            <input type="color" id="rightColorInput" value="#06b6d4" class="h-8 w-14 bg-transparent rounded cursor-pointer border border-slate-700">
+                            <span id="rightColorHex" class="text-xs font-mono text-slate-400">#06b6d4</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Profile Photo (Auto-Crop)</label>
+                        <input type="file" id="rightImgInput" accept="image/*" class="w-full text-xs text-slate-400 file:mr-2 file:py-1 file:px-2.5 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-cyan-500/20 file:text-cyan-300 hover:file:bg-cyan-500/30 cursor-pointer">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Celebration Audio (MP3/WAV/AAC)</label>
+                        <input type="file" id="rightAudioInput" accept="audio/*" class="w-full text-xs text-slate-400 file:mr-2 file:py-1 file:px-2.5 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-300 hover:file:bg-slate-700 cursor-pointer">
+                        <span id="rightAudioStatus" class="text-[10px] text-emerald-400 mt-1 block">✓ Built-in synth chime ready</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Drawer Bottom Action Buttons -->
+            <div class="pt-3 border-t border-slate-800 space-y-2">
+                <button id="resetVotesBtn" class="w-full py-2 px-4 bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 border border-rose-500/30 rounded-xl font-semibold text-xs transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-rotate-left"></i> Reset Votes Counter to 00
+                </button>
+                <button id="resetAllDefaultsBtn" class="w-full py-1.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-xl text-[11px] transition">
+                    Restore Factory Defaults
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Application State with starting votes at 0
+        const DEFAULT_STATE = {
+            leftName: 'Rahul',
+            rightName: 'Amit',
+            leftColor: '#eab308',
+            rightColor: '#06b6d4',
+            leftVotes: 0,
+            rightVotes: 0,
+            leftImage: 'https://placehold.co/300x300/f59e0b/ffffff?text=Rahul',
+            rightImage: 'https://placehold.co/300x300/06b6d4/ffffff?text=Amit',
+            soundEnabled: true,
+            history: []
+        };
+
+        let appState = { ...DEFAULT_STATE };
+        let customLeftAudioElement = null;
+        let customRightAudioElement = null;
+        let customLeftAudioUrl = null;
+        let customRightAudioUrl = null;
+
+        // Web Audio Synthesizer Engine
+        let audioCtx = null;
+
+        function initAudioContext() {
+            if (!audioCtx) {
+                const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+                if (AudioCtxClass) {
+                    audioCtx = new AudioCtxClass();
+                }
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        // Web Audio Synthesized Chime Sound Effect
+        function playSynthesizedCheer(side) {
+            initAudioContext();
+            if (!audioCtx) return;
+
+            const now = audioCtx.currentTime;
+            const osc1 = audioCtx.createOscillator();
+            const osc2 = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            const pitchBase = side === 'left' ? 587.33 : 659.25;
+
+            osc1.type = 'triangle';
+            osc2.type = 'sine';
+
+            osc1.frequency.setValueAtTime(pitchBase, now);
+            osc1.frequency.exponentialRampToValueAtTime(pitchBase * 1.5, now + 0.12);
+
+            osc2.frequency.setValueAtTime(pitchBase * 1.25, now);
+            osc2.frequency.exponentialRampToValueAtTime(pitchBase * 2.0, now + 0.15);
+
+            gain.gain.setValueAtTime(0.35, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+
+            osc1.connect(gain);
+            osc2.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc1.start(now);
+            osc2.start(now);
+
+            osc1.stop(now + 0.26);
+            osc2.stop(now + 0.26);
+        }
+
+        function playSound(side) {
+            if (!appState.soundEnabled) return;
+            initAudioContext();
+
+            if (side === 'left' && customLeftAudioElement) {
+                const clone = customLeftAudioElement.cloneNode();
+                clone.play().catch(() => playSynthesizedCheer('left'));
+            } else if (side === 'right' && customRightAudioElement) {
+                const clone = customRightAudioElement.cloneNode();
+                clone.play().catch(() => playSynthesizedCheer('right'));
+            } else {
+                playSynthesizedCheer(side);
+            }
+        }
+
+        // YIQ Luminance Contrast Calculation Helper for Text Readability
+        function getContrastTextColor(hexColor) {
+            let hex = hexColor.replace('#', '');
+            if (hex.length === 3) {
+                hex = hex.split('').map(c => c + c).join('');
+            }
+            const r = parseInt(hex.substring(0, 2), 16) || 0;
+            const g = parseInt(hex.substring(2, 4), 16) || 0;
+            const b = parseInt(hex.substring(4, 6), 16) || 0;
+            const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+            return (yiq >= 128) ? '#0f172a' : '#ffffff';
+        }
+
+        // DOM Element Cache
+        const leftSection = document.getElementById('leftSection');
+        const rightSection = document.getElementById('rightSection');
+        const leftNameDisplay = document.getElementById('leftNameDisplay');
+        const rightNameDisplay = document.getElementById('rightNameDisplay');
+        const leftImgDisplay = document.getElementById('leftImgDisplay');
+        const rightImgDisplay = document.getElementById('rightImgDisplay');
+        const leftVoteDisplay = document.getElementById('leftVoteDisplay');
+        const rightVoteDisplay = document.getElementById('rightVoteDisplay');
+
+        const settingsDrawer = document.getElementById('settingsDrawer');
+        const drawerContent = document.getElementById('drawerContent');
+        const openSettingsBtn = document.getElementById('openSettingsBtn');
+        const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+
+        const leftNameInput = document.getElementById('leftNameInput');
+        const rightNameInput = document.getElementById('rightNameInput');
+        const leftColorInput = document.getElementById('leftColorInput');
+        const rightColorInput = document.getElementById('rightColorInput');
+        const leftColorHex = document.getElementById('leftColorHex');
+        const rightColorHex = document.getElementById('rightColorHex');
+        const leftImgInput = document.getElementById('leftImgInput');
+        const rightImgInput = document.getElementById('rightImgInput');
+        const leftAudioInput = document.getElementById('leftAudioInput');
+        const rightAudioInput = document.getElementById('rightAudioInput');
+        const leftAudioStatus = document.getElementById('leftAudioStatus');
+        const rightAudioStatus = document.getElementById('rightAudioStatus');
+
+        const undoBtn = document.getElementById('undoBtn');
+        const soundToggleBtn = document.getElementById('soundToggleBtn');
+        const soundIcon = document.getElementById('soundIcon');
+        const soundStatusText = document.getElementById('soundStatusText');
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        const fullscreenIcon = document.getElementById('fullscreenIcon');
+        const topHeader = document.getElementById('topHeader');
+        const resetVotesBtn = document.getElementById('resetVotesBtn');
+        const resetAllDefaultsBtn = document.getElementById('resetAllDefaultsBtn');
+
+        function loadSavedState() {
+            try {
+                const saved = localStorage.getItem('tap_counter_app_v3');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    appState = { ...DEFAULT_STATE, ...parsed };
+                    if (!Array.isArray(appState.history)) appState.history = [];
+                }
+            } catch (e) {
+                console.warn('LocalStorage load error:', e);
+            }
+            renderUI();
+        }
+
+        function saveState() {
+            try {
+                localStorage.setItem('tap_counter_app_v3', JSON.stringify(appState));
+            } catch (e) {
+                console.warn('LocalStorage save failed:', e);
+            }
+        }
+
+        function formatVote(count) {
+            const formatted = count < 10 ? `0${count}` : `${count}`;
+            return `Vote - ${formatted}`;
+        }
+
+        function renderUI() {
+            if (leftNameDisplay) leftNameDisplay.textContent = appState.leftName || 'Rahul';
+            if (rightNameDisplay) rightNameDisplay.textContent = appState.rightName || 'Amit';
+            if (leftVoteDisplay) leftVoteDisplay.textContent = formatVote(appState.leftVotes);
+            if (rightVoteDisplay) rightVoteDisplay.textContent = formatVote(appState.rightVotes);
+
+            if (leftSection) leftSection.style.backgroundColor = appState.leftColor;
+            if (rightSection) rightSection.style.backgroundColor = appState.rightColor;
+
+            // Apply dynamic contrasting text colors
+            const leftTextColor = getContrastTextColor(appState.leftColor);
+            const rightTextColor = getContrastTextColor(appState.rightColor);
+
+            if (leftNameDisplay) leftNameDisplay.style.color = leftTextColor;
+            if (leftVoteDisplay) leftVoteDisplay.style.color = leftTextColor;
+            if (rightNameDisplay) rightNameDisplay.style.color = rightTextColor;
+            if (rightVoteDisplay) rightVoteDisplay.style.color = rightTextColor;
+
+            if (leftColorInput) leftColorInput.value = appState.leftColor;
+            if (rightColorInput) rightColorInput.value = appState.rightColor;
+            if (leftColorHex) leftColorHex.textContent = appState.leftColor;
+            if (rightColorHex) rightColorHex.textContent = appState.rightColor;
+
+            if (leftNameInput) leftNameInput.value = appState.leftName;
+            if (rightNameInput) rightNameInput.value = appState.rightName;
+
+            if (leftImgDisplay) leftImgDisplay.src = appState.leftImage;
+            if (rightImgDisplay) rightImgDisplay.src = appState.rightImage;
+
+            if (soundIcon && soundStatusText) {
+                if (appState.soundEnabled) {
+                    soundIcon.className = 'fa-solid fa-volume-high text-emerald-400';
+                    soundStatusText.textContent = 'Sound On';
+                } else {
+                    soundIcon.className = 'fa-solid fa-volume-xmark text-slate-400';
+                    soundStatusText.textContent = 'Muted';
+                }
+            }
+
+            if (leftAudioStatus) leftAudioStatus.textContent = customLeftAudioElement ? '✓ Custom audio active' : '✓ Built-in synth chime ready';
+            if (rightAudioStatus) rightAudioStatus.textContent = customRightAudioElement ? '✓ Custom audio active' : '✓ Built-in synth chime ready';
+        }
+
+        function triggerTap(side) {
+            if (side === 'left') {
+                appState.leftVotes++;
+                appState.history.push('left');
+                if (leftSection) {
+                    leftSection.classList.remove('tap-pulse');
+                    void leftSection.offsetWidth;
+                    leftSection.classList.add('tap-pulse');
+                }
+            } else {
+                appState.rightVotes++;
+                appState.history.push('right');
+                if (rightSection) {
+                    rightSection.classList.remove('tap-pulse');
+                    void rightSection.offsetWidth;
+                    rightSection.classList.add('tap-pulse');
+                }
+            }
+
+            // Cap history length at 50 entries to preserve LocalStorage efficiency
+            if (appState.history.length > 50) {
+                appState.history.shift();
+            }
+
+            playSound(side);
+            renderUI();
+            saveState();
+        }
+
+        function undoTap() {
+            if (!appState.history || appState.history.length === 0) return;
+            const last = appState.history.pop();
+            if (last === 'left' && appState.leftVotes > 0) appState.leftVotes--;
+            else if (last === 'right' && appState.rightVotes > 0) appState.rightVotes--;
+            renderUI();
+            saveState();
+        }
+
+        if (leftSection) leftSection.addEventListener('click', () => triggerTap('left'));
+        if (rightSection) rightSection.addEventListener('click', () => triggerTap('right'));
+
+        document.addEventListener('keydown', (e) => {
+            const activeTag = document.activeElement ? document.activeElement.tagName : '';
+            const isInputFocused = activeTag === 'INPUT' || activeTag === 'TEXTAREA';
+            const isDrawerOpen = settingsDrawer && !settingsDrawer.classList.contains('pointer-events-none');
+
+            // Handle Escape Key to close settings
+            if (e.key === 'Escape' && isDrawerOpen) {
+                closeSettings();
+                return;
+            }
+
+            // Ignore voting hotkeys if input is focused, drawer is open, or Ctrl/Cmd modifier keys are pressed
+            if (isInputFocused || isDrawerOpen || e.ctrlKey || e.metaKey || e.altKey) {
+                return;
+            }
+
+            if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') {
+                triggerTap('left');
+            } else if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') {
+                triggerTap('right');
+            } else if (e.key.toLowerCase() === 'z' || e.key.toLowerCase() === 'u') {
+                undoTap();
+            } else if (e.key.toLowerCase() === 'f') {
+                toggleFullscreen();
+            }
+        });
+
+        if (openSettingsBtn) {
+            openSettingsBtn.addEventListener('click', () => {
+                if (settingsDrawer && drawerContent) {
+                    settingsDrawer.classList.remove('pointer-events-none', 'opacity-0');
+                    drawerContent.classList.remove('translate-x-full');
+                }
+            });
+        }
+
+        function closeSettings() {
+            if (drawerContent && settingsDrawer) {
+                drawerContent.classList.add('translate-x-full');
+                settingsDrawer.classList.add('opacity-0', 'pointer-events-none');
+            }
+        }
+
+        if (closeSettingsBtn) closeSettingsBtn.addEventListener('click', closeSettings);
+        if (settingsDrawer) {
+            settingsDrawer.addEventListener('click', (e) => {
+                if (e.target === settingsDrawer) closeSettings();
+            });
+        }
+
+        if (leftNameInput) {
+            leftNameInput.addEventListener('input', (e) => {
+                appState.leftName = e.target.value;
+                renderUI();
+                saveState();
+            });
+        }
+
+        if (rightNameInput) {
+            rightNameInput.addEventListener('input', (e) => {
+                appState.rightName = e.target.value;
+                renderUI();
+                saveState();
+            });
+        }
+
+        if (leftColorInput) {
+            leftColorInput.addEventListener('input', (e) => {
+                appState.leftColor = e.target.value;
+                renderUI();
+                saveState();
+            });
+        }
+
+        if (rightColorInput) {
+            rightColorInput.addEventListener('input', (e) => {
+                appState.rightColor = e.target.value;
+                renderUI();
+                saveState();
+            });
+        }
+
+        function compressAndSetImage(file, side) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 400;
+                    const MAX_HEIGHT = 400;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > MAX_WIDTH) {
+                            height *= MAX_WIDTH / width;
+                            width = MAX_WIDTH;
+                        }
+                    } else {
+                        if (height > MAX_HEIGHT) {
+                            width *= MAX_HEIGHT / height;
+                            height = MAX_HEIGHT;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.82);
+                    if (side === 'left') appState.leftImage = compressedBase64;
+                    else appState.rightImage = compressedBase64;
+
+                    renderUI();
+                    saveState();
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        if (leftImgInput) {
+            leftImgInput.addEventListener('change', () => {
+                if (leftImgInput.files[0]) compressAndSetImage(leftImgInput.files[0], 'left');
+            });
+        }
+        if (rightImgInput) {
+            rightImgInput.addEventListener('change', () => {
+                if (rightImgInput.files[0]) compressAndSetImage(rightImgInput.files[0], 'right');
+            });
+        }
+
+        // Custom Audio File Uploads with ObjectURL Memory Cleanups
+        if (leftAudioInput) {
+            leftAudioInput.addEventListener('change', () => {
+                const file = leftAudioInput.files[0];
+                if (file) {
+                    if (customLeftAudioUrl) URL.revokeObjectURL(customLeftAudioUrl);
+                    customLeftAudioUrl = URL.createObjectURL(file);
+                    customLeftAudioElement = new Audio(customLeftAudioUrl);
+                    renderUI();
+                }
+            });
+        }
+
+        if (rightAudioInput) {
+            rightAudioInput.addEventListener('change', () => {
+                const file = rightAudioInput.files[0];
+                if (file) {
+                    if (customRightAudioUrl) URL.revokeObjectURL(customRightAudioUrl);
+                    customRightAudioUrl = URL.createObjectURL(file);
+                    customRightAudioElement = new Audio(customRightAudioUrl);
+                    renderUI();
+                }
+            });
+        }
+
+        if (undoBtn) {
+            undoBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                undoTap();
+            });
+        }
+
+        if (soundToggleBtn) {
+            soundToggleBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                initAudioContext();
+                appState.soundEnabled = !appState.soundEnabled;
+                renderUI();
+                saveState();
+            });
+        }
+
+        if (resetVotesBtn) {
+            resetVotesBtn.addEventListener('click', () => {
+                appState.leftVotes = 0;
+                appState.rightVotes = 0;
+                appState.history = [];
+                renderUI();
+                saveState();
+                closeSettings();
+            });
+        }
+
+        if (resetAllDefaultsBtn) {
+            resetAllDefaultsBtn.addEventListener('click', () => {
+                appState = JSON.parse(JSON.stringify(DEFAULT_STATE));
+                
+                // Clean up audio ObjectURLs
+                if (customLeftAudioUrl) URL.revokeObjectURL(customLeftAudioUrl);
+                if (customRightAudioUrl) URL.revokeObjectURL(customRightAudioUrl);
+                customLeftAudioElement = null;
+                customRightAudioElement = null;
+                customLeftAudioUrl = null;
+                customRightAudioUrl = null;
+
+                // Clear input elements in DOM
+                if (leftImgInput) leftImgInput.value = '';
+                if (rightImgInput) rightImgInput.value = '';
+                if (leftAudioInput) leftAudioInput.value = '';
+                if (rightAudioInput) rightAudioInput.value = '';
+
+                renderUI();
+                saveState();
+                closeSettings();
+            });
+        }
+
+        function toggleFullscreen() {
+            initAudioContext();
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            } else {
+                if (document.exitFullscreen) document.exitFullscreen();
+            }
+        }
+
+        if (fullscreenBtn) {
+            fullscreenBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleFullscreen();
+            });
+        }
+
+        document.addEventListener('fullscreenchange', () => {
+            if (document.fullscreenElement) {
+                if (fullscreenIcon) fullscreenIcon.className = 'fa-solid fa-compress';
+                if (topHeader) topHeader.classList.add('hidden');
+            } else {
+                if (fullscreenIcon) fullscreenIcon.className = 'fa-solid fa-expand';
+                if (topHeader) topHeader.classList.remove('hidden');
+            }
+        });
+
+        window.onload = function() {
+            loadSavedState();
+        };
+    </script>
+</body>
+</html>
