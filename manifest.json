@@ -1,0 +1,14 @@
+
+{
+  "id": "./",
+  "name": "Tap Counter",
+  "short_name": "Tap Counter",
+  "description": "A simple tap counter app to count and manage votes for two candidates.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#111827",
+  "theme_color": "#111827",
+  "lang": "en"
+}
