@@ -1,0 +1,82 @@
+
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="green" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#54FFC0"/>
+      <stop offset="50%" stop-color="#00BD88"/>
+      <stop offset="100%" stop-color="#007568"/>
+    </linearGradient>
+
+    <linearGradient id="red" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFB1C7"/>
+      <stop offset="50%" stop-color="#FF477E"/>
+      <stop offset="100%" stop-color="#B91D61"/>
+    </linearGradient>
+
+    <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity=".4"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+
+    <linearGradient id="bolt" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="50%" stop-color="#FFF0B0"/>
+      <stop offset="100%" stop-color="#FFCC57"/>
+    </linearGradient>
+
+    <filter id="shadow" x="-40%" y="-40%" width="180%" height="190%">
+      <feDropShadow dx="0" dy="6" stdDeviation="5"
+                    flood-color="#17202C" flood-opacity=".4"/>
+    </filter>
+
+    <clipPath id="rounded">
+      <rect width="512" height="512" rx="105"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#rounded)">
+    <!-- Equal left and right halves, divided exactly through the center -->
+    <rect width="256" height="512" fill="url(#green)"/>
+    <rect x="256" width="256" height="512" fill="url(#red)"/>
+
+    <!-- Matching glossy finish -->
+    <path d="M0 0 H512 V112 Q256 170 0 112 Z"
+          fill="url(#gloss)"/>
+
+    <path d="M0 440 Q256 495 512 440 V512 H0 Z"
+          fill="#071C2A" opacity=".12"/>
+
+    <!-- Number 2 -->
+    <text x="128" y="265"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="176" font-weight="800"
+          text-anchor="middle" dominant-baseline="central"
+          fill="#FFFFFF" filter="url(#shadow)">2</text>
+
+    <!-- Number 3 -->
+    <text x="384" y="265"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="176" font-weight="800"
+          text-anchor="middle" dominant-baseline="central"
+          fill="#FFFFFF" filter="url(#shadow)">3</text>
+
+    <!-- Equal straight center partition -->
+    <rect x="250" y="0" width="12" height="512"
+          fill="#102333" opacity=".28"/>
+    <rect x="253" y="0" width="6" height="512"
+          fill="#FFF0C0"/>
+
+    <!-- Centered 3D lightning bolt -->
+    <path d="M278 166 L238 269 H263 L245 346
+             L295 238 H269 Z"
+          fill="#7D3C25" opacity=".45"
+          transform="translate(2 5)"/>
+
+    <path d="M278 166 L238 269 H263 L245 346
+             L295 238 H269 Z"
+          fill="url(#bolt)"
+          stroke="#FFFFFF" stroke-width="4"
+          stroke-linejoin="round"
+          filter="url(#shadow)"/>
+  </g>
+</svg>
